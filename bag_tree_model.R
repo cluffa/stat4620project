@@ -25,7 +25,7 @@ for (N in samples) {
   
   start.time <- proc.time()
   rf <- train(price ~. -postalCode -district -model -seller -offerType -lastSeen -dateCrawled -dateCreated,
-                      data = train.sample[1:N],
+                      data = train.sample[1:N,],
                       method = 'rf',
                       ntree = 500,
                       tuneGrid = data.frame(mtry = trys),
