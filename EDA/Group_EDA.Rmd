@@ -1,0 +1,227 @@
+---
+title: "Group EDA"
+author: "Jamie Walters"
+date: "11/11/2021"
+output:
+  output: rmarkdown::github_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("autos.Rdata")
+library(tidyverse)
+```
+
+
+
+### Are there any problems with the data?
+```{r}
+summary(train)
+
+## Remove nrOfPictures, all 0
+train = train[,-18]
+test = test[,-18]
+```
+
+```{r}
+## Convert to factor variables
+
+## seller
+train$seller = as.factor(train$seller)
+test$seller = as.factor(test$seller)
+
+## offerType
+train$offerType = as.factor(train$offerType)
+test$offerType = as.factor(test$offerType)
+
+## abtest
+train$abtest = as.factor(train$abtest)
+test$abtest = as.factor(test$abtest)
+
+## vehicleType
+train$vehicleType = as.factor(train$vehicleType)
+test$vehicleType = as.factor(test$vehicleType)
+
+## gearbox
+train$gearbox = as.factor(train$gearbox)
+test$gearbox = as.factor(test$gearbox)
+
+## model
+train$model = as.factor(train$model)
+test$model = as.factor(test$model)
+
+## fuelType
+train$fuelType = as.factor(train$fuelType)
+test$fuelType = as.factor(test$fuelType)
+
+## brand
+train$brand = as.factor(train$brand)
+test$brand = as.factor(test$brand)
+
+## notRepairedDamage
+train$notRepairedDamage = as.factor(train$notRepairedDamage)
+test$notRepairedDamage = as.factor(test$notRepairedDamage)
+
+## monthOfRegistration
+train$monthOfRegistration = as.factor(train$monthOfRegistration)
+test$monthOfRegistration = as.factor(test$monthOfRegistration)
+
+```
+
+```{r}
+## Filter yearOfRegistration to be from 1900 to 2022
+train = train[train$yearOfRegistration >= 1900 & train$yearOfRegistration <= 2022, ]
+range(train$yearOfRegistration)
+
+test = test[test$yearOfRegistration >= 1900 & test$yearOfRegistration <= 2022, ]
+range(test$yearOfRegistration)
+
+## Filter powerPS to be less than 1000
+train = train[train$powerPS < 1000, ]
+range(train$powerPS)
+
+test = test[test$powerPS < 1000, ]
+range(train$powerPS)
+
+## Filter price 
+hist(train$price)
+train = train[train$price > 0 & train$price <= 500000, ]
+test = test[test$price > 0 & test$price <= 500000, ]
+```
+
+There were quite a few errors in the data that needed cleaned up. First, we got rid of nrOfPictures, because all of the values were 0 and the description said it was an error. Next we converted the character columns to factor variables. Next, we filtered the yearOfRegistration to be between 1900 to 2022. The minimum was 1000 and the maximum was 9999, which seem to be placeholders. We also filtered powerPS to be less than 1000 because everything after 1000 seems to be fake listings because the prices were so low. Price also had placeholders like 99999999, 12345678, and 0. We filtered price to be greater than 0 and less than or equal to 500000. 
+
+```{r}
+## Create a column for the number of days the listing was online (lastSeen - dateCreated)
+
+train$dateCreated = as.Date(train$dateCreated)
+train$lastSeen = as.Date(train$lastSeen)
+train$date_diff = train$lastSeen - train$dateCreated
+train$date_diff = as.numeric(train$date_diff)
+
+test$dateCreated = as.Date(test$dateCreated)
+test$lastSeen = as.Date(test$lastSeen)
+test$date_diff = test$lastSeen - test$dateCreated
+test$date_diff = as.numeric(test$date_diff)
+```
+
+
+### Is there any missing data?
+```{r}
+## Any missing data?
+for(i in 1:ncol(train)){
+    cat(any(is.na(train[,i])),"\n")
+}
+
+for(i in 1:ncol(test)){
+    cat(any(is.na(test[,i])),"\n")
+}
+
+for(i in 1:ncol(train)){
+    cat(any(is.nan(train[,i])),"\n")
+}
+
+for(i in 1:ncol(test)){
+    cat(any(is.nan(test[,i])),"\n")
+}
+
+
+## Checking empty for train
+count(train %>% filter(vehicleType == ""))
+count(train %>% filter(gearbox == ""))
+count(train %>% filter(model == ""))
+count(train %>% filter(fuelType == ""))
+count(train %>% filter(notRepairedDamage == ""))
+
+## Checking empty for test
+count(test %>% filter(vehicleType == ""))
+count(test %>% filter(gearbox == ""))
+count(test %>% filter(model == ""))
+count(test %>% filter(fuelType == ""))
+count(test %>% filter(notRepairedDamage == ""))
+```
+
+There are no na's or nan's, but five columns have empty values. 
+
+### Does there appear to be potentially problematic collinearity amongst the predictor variables?
+
+```{r}
+## Pairs plot of continuous variables
+range(train$price)
+boxplot(train$price, ylim = c(0,20000), main = 'price')
+hist(train$price[train$price < 25000])
+hist(log(train$price))
+
+range(train$powerPS)
+boxplot(train$powerPS, ylim = c(0, 300), main = 'powerPS')
+hist(train$powerPS)
+
+
+range(train$kilometer)
+boxplot(train$kilometer, ylim = c(85000, 200000), main = 'kilometer')
+hist(train$kilometer)
+
+range(train$date_diff)
+boxplot(train$date_diff, ylim = c(0, 35), main = 'date_diff')
+hist(train$date_diff[train$date_diff < 40])
+
+plot(train[,c(5, 8, 10, 12, 20)])
+```
+
+Price, powerPS, and date_diff have mostly small values with some high outliers. 
+
+Kilometer is interesting. The max value of 150000 is also the median. There are also gaps in the histogram. The number of vehicles in each bin is relatively even, maybe slightly increaseing, from 0-100000. Then there's a gap until about 125000, and again between 125000 and 150000. The bin for 150000 is huge, most of the data falls here.
+
+The histograms for price, powerPS, and date_diff all appear to be right skewed. 
+
+From the pairs plot, it doesn't seem like there's much collinearity. 
+
+```{r}
+cor(select_if(train, is.numeric), use = "complete.obs")
+```
+
+From the correlation matrix, it also doesn't look like there's any collinearity to worry about. 
+
+### What are they key figures or numerical summaries that describe the most aspects of the data?
+
+```{r}
+## Boxplots for factor vars
+with(train,{
+  plot(price~seller, ylim = c(0, 25000))
+  plot(price~offerType, ylim = c(0, 25000))
+  plot(price~vehicleType, ylim = c(0, 25000))
+  plot(price~gearbox, ylim = c(0, 25000))
+  plot(price~fuelType, ylim = c(0, 25000))
+  plot(price~brand, ylim = c(0, 25000))
+  plot(price~notRepairedDamage, ylim = c(0, 25000))
+  plot(price~monthOfRegistration, ylim = c(0, 25000))
+})
+
+## Drop abtest, they look like the same thing, something related to the data scraping? 
+train = train[, -6]
+train[train$seller=='gewerblich',]
+```
+
+```{r}
+plot(train$powerPS, train$price)
+plot(train$kilometer, train$price)
+```
+
+Boxplot for seller looks odd for 'gewerblich', which means a commercial seller. It turns out there's only 2 vehicles sold through a commercial seller.
+
+Most of the boxplots have a lot of outliers on the high price end. Most of the boxplots look to be right skewed. 
+
+The plot of price vs power looks like there's a clump in the lower left hand corner of the plot. This may indicate some sort of relationship
+
+The plot of price vs kilometer is less clear, there may be some sort of polynomial relationship, but it is not as obvious.
+
+### Can you detect early signs of what variables are likely to be important in predicting the response?
+
+From the key figures and numerical summaries as well as the correlation matrix shown above, it seems like seller, offerType, powerPS, kilometer, date_diff, and notRepairedDamage could be the most important variables.
+
+### Does your EDA suggest to you what modeling approaches you should aim to try? 
+Because we are unsure of the usefulness of some of the predictors, LASSO is a modeling approach we should aim to try. LASSO will get rid of any of the predictors that are not useful in the model. Transforming price using log made the histogram look approximately normal, so we may consider doing this as well.
+
+
+
+
+
