@@ -1,7 +1,8 @@
 # stat4620project
-Machine Learing rf model in R
+Machine learing using random forest model in R
 
-/EDA was created in collaboration with classmates.
+/EDA was created in collaboration with classmates.  
+I only wrote the part about our rf model.
 
 See randomForest.R for modeling  
 See clean_autos_dataset.R for data cleaning
