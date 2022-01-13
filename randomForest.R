@@ -7,6 +7,7 @@ load("clean_autos.Rdata")
 set.seed(1)
 
 # multicore solution from http://topepo.github.io/caret
+######### tuning the model over mtry 25 - 125, with sample sizes from 128 - 32k ###########
 
 cl <- makePSOCKcluster(12)
 registerDoParallel(cl)
@@ -46,10 +47,10 @@ stopCluster(cl)
 
 save(rf.sampled, file = "rf.sampled.Rdata")
 
-# full model at mtry = 40
+############ full model fit on 150k obs at optimized mtry = 40 ###########
+
 cl <- makePSOCKcluster(12)
 registerDoParallel(cl)
-
 
 trys <- 40
 
